@@ -47,7 +47,7 @@ jobs:
         run: bandit -r src/ -f json -o bandit-report.json || true
       - name: pip-audit
         run: pip-audit --strict || true
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: security-aetheria-customer-service
@@ -89,7 +89,7 @@ jobs:
         run: python -m build
       - name: Check
         run: twine check dist/*
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: dist
           path: dist/

@@ -49,7 +49,7 @@ jobs:
         run: |
           pip install bandit
           bandit -r src/ -f json -o bandit-report.json || true
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: security-report
@@ -91,7 +91,7 @@ jobs:
         run: python -m build
       - name: Check
         run: twine check dist/*
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: dist
           path: dist/
