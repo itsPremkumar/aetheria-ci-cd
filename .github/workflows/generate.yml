@@ -1,0 +1,23 @@
+name: Aetheria CI/CD — All Verticals
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  generate:
+    name: Generate & Verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Generate workflows
+        run: python scripts/generate-all.py
+      - name: Verify
+        run: |
+          ls -la .github/workflows/
+          echo "All workflows generated successfully"

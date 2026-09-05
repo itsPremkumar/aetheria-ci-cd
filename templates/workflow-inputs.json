@@ -1,0 +1,27 @@
+{
+  "description": "Aetheria Vertical AI — CI/CD Pipeline",
+  "form": {
+    "properties": {
+      "project_name": {
+        "title": "Project Name",
+        "type": "string",
+        "description": "Name of the vertical project (e.g., aetheria-healthcare)"
+      },
+      "python_version": {
+        "title": "Python Version",
+        "type": "string",
+        "default": "3.11"
+      },
+      "enable_docker": {
+        "title": "Enable Docker Build",
+        "type": "boolean",
+        "default": true
+      },
+      "enable_pypi": {
+        "title": "Enable PyPI Publishing",
+        "type": "boolean",
+        "default": true
+      }
+    }
+  }
+}

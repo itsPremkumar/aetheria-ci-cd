@@ -1,0 +1,147 @@
+name: aetheria-manufacturing CI/CD
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  release:
+    types: [published]
+
+concurrency:
+  group: ${ github.ref }
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Quality (ruff + mypy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install
+        run: |
+          pip install -U pip
+          pip install ruff mypy
+          pip install -e ".[dev]"
+      - name: Ruff lint
+        run: ruff check src/ tests/
+      - name: Ruff format
+        run: ruff format --check src/ tests/
+      - name: Mypy
+        run: mypy src/ --ignore-missing-imports
+
+  security:
+    name: Security (bandit + pip-audit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install
+        run: pip install bandit pip-audit
+      - name: Bandit
+        run: bandit -r src/ -f json -o bandit-report.json || true
+      - name: pip-audit
+        run: pip-audit --strict || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-aetheria-manufacturing
+          path: bandit-report.json
+
+  test:
+    name: Test (py${ matrix.python-version }, ${ matrix.os })
+    needs: quality
+    runs-on: ${ matrix.os }
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.10', '3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${ matrix.python-version }
+      - name: Install
+        run: |
+          pip install -U pip
+          pip install -e ".[dev]"
+      - name: Test
+        run: pytest tests/ -v --cov=src --cov-report=xml --cov-fail-under=80
+
+  build:
+    name: Build Package
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install
+        run: pip install build twine
+      - name: Build
+        run: python -m build
+      - name: Check
+        run: twine check dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  docker:
+    name: Docker Build
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: aetheria-manufacturing:${ github.sha }
+
+  publish:
+    name: Publish to PyPI
+    needs: [build, docker]
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/aetheria-manufacturing
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install
+        run: pip install build twine
+      - name: Build
+        run: python -m build
+      - name: Publish
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+  docs:
+    name: Deploy Docs
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install
+        run: pip install mkdocs mkdocs-material
+      - name: Build
+        run: mkdocs build --strict
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/
